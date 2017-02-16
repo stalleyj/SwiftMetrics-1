@@ -40,6 +40,11 @@ private class HttpMonitor: ServerMonitor {
             if (requestStore.count > 1000) {
                 requestStore.removeFirst()
             }
+            let headers = request.headers
+            for (header) in headers {
+                print("Header = \(header)\n")
+            }
+            let index = headers.startIndex
             requestStore.append(requests(request: request, requestTime: self.timeIntervalSince1970MilliSeconds))
         }
     }
