@@ -15,7 +15,8 @@
  *******************************************************************************/
 import agentcore
 import Foundation
-import CloudFoundryEnv
+import Configuration
+import CloudFoundryConfig
 #if os(Linux)
 import Glibc
 #else
@@ -94,22 +95,18 @@ open class SwiftMetrics {
 
   private func setDefaultLibraryPath() {
     var defaultLibraryPath = "."
-    var isLocal = true
-    do {
-      isLocal = try CloudFoundryEnv.getAppEnv().isLocal
-    } catch {
-      loaderApi.logMessage(debug, "setDefaultLibraryPath(): unable to get CF env, defaulting to local")
-    }
-    //if we're in Bluemix, use the path the swift-buildpack saves libraries to
-    if (!isLocal) {
-      defaultLibraryPath = "/home/vcap/app/.swift-lib"
-    } else {
-      ///use the directory that the swift program lives in
+    let configMgr = ConfigurationManager().load(.environmentVariables)
+    loaderApi.logMessage(debug, "setDefaultLibraryPath(): isLocal: \(configMgr.isLocal)")
+    if (configMgr.isLocal) {
+      //if local, use the directory that the swift program lives in
       let programPath = CommandLine.arguments[0]
       let i = programPath.range(of: "/", options: .backwards)
       if i != nil {
         defaultLibraryPath = programPath.substring(to: i!.lowerBound)
       }
+    } else {
+      //if we're in Bluemix, use the path the swift-buildpack saves libraries to
+      defaultLibraryPath = "/home/vcap/app/.swift-lib"
     }
     loaderApi.logMessage(fine, "setDefaultLibraryPath(): to \(defaultLibraryPath)")
     self.setPluginSearch(toDirectory: URL(fileURLWithPath: defaultLibraryPath, isDirectory: true))
@@ -191,8 +188,6 @@ open class SwiftMetrics {
         self.setDefaultLibraryPath()
       }
       _ = loaderApi.initialize()
-      loaderApi.logMessage(debug, "start(): Forcing MQTT Connection on")
-      loaderApi.setProperty("com.ibm.diagnostics.healthcenter.mqtt", "on")
       loaderApi.start()
     } else {
       loaderApi.logMessage(fine, "start(): Swift Application Metrics has already started")
@@ -300,4 +295,3 @@ open class SwiftMetrics {
     return swiftMon!
   }
 }
-
